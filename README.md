@@ -1,6 +1,4 @@
-Here is the complete and final `README.md` file with the **Dataset (CSV)** section included.
 
-```markdown
 # FitPulse - Health Anomaly Detection
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python)
