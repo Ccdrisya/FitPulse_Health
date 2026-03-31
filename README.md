@@ -81,10 +81,10 @@ Passionate about building web applications, exploring machine learning, and turn
 
 | Project | Description | Tech |
 |---|---|---|
+| 💓 [FitPulse Health](https://github.com/Ccdrisya/FitPulse_Health) | Health anomaly detection app | Flask, Python, MySQL |
 | 🌱 [Floranet](https://github.com/Ccdrisya/Floranet-garden) | Gardening community platform | Django, SQLite, Razorpay |
 | 🎉 [Yukthi](https://yukthismc.onrender.com/) | Tech fest website — St. Mary's College | Node.js, Express, MongoDB |
 | 📝 [Blog Management System](https://github.com/Ccdrisya/Blog-manag-Sys) | CLI-based blog platform | Python, MySQL |
-| 💓 [FitPulse Health](https://github.com/Ccdrisya/FitPulse_Health) | Health anomaly detection app | Flask, Python, MySQL |
 
 ---
 
