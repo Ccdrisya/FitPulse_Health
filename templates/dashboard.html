@@ -224,175 +224,97 @@
         </section>
     </main>
 
-    <script>
-        // 1. Data from Flask
-        const dates = {{ chart_data.dates | tojson }};
-        const heartRates = {{ chart_data.heart_rate | tojson }};
-        const steps = {{ chart_data.steps | tojson }};
-        const sleep = {{ chart_data.sleep | tojson }};
+ <!-- ✅ Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        let selectedEntryIndex = null;
+<script>
+    // Data from Flask
+    const dates = {{ chart_data.dates | tojson }};
+    const heartRates = {{ chart_data.heart_rate | tojson }};
+    const steps = {{ chart_data.steps | tojson }};
+    const sleep = {{ chart_data.sleep | tojson }};
+    const status = {{ chart_data.status | tojson }};  // IMPORTANT
 
-        // 2. Graph Drawing Function with Axes
-        function drawGraph(canvasId, data, color, tooltipId) {
-            const canvas = document.getElementById(canvasId);
-            const tooltip = document.getElementById(tooltipId);
-            const ctx = canvas.getContext('2d');
-
-            // Handle High DPI screens
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.parentElement.getBoundingClientRect();
-            
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-
-            const w = rect.width;
-            const h = rect.height;
-            
-            // Margins
-            const margin = { top: 10, right: 10, bottom: 30, left: 40 };
-            const plotW = w - margin.left - margin.right;
-            const plotH = h - margin.top - margin.bottom;
-
-            ctx.clearRect(0, 0, w, h);
-
-            if (!data || data.length === 0) {
-                ctx.fillStyle = '#64748b';
-                ctx.font = "12px Inter";
-                ctx.textAlign = "center";
-                ctx.fillText("No data available", w/2, h/2);
-                return;
-            }
-
-            // Calculations
-            const maxVal = Math.max(...data) * 1.1;
-            const minVal = Math.min(...data) * 0.9;
-            const range = maxVal - minVal || 1;
-
-            const getX = (i) => margin.left + (i / (data.length - 1 || 1)) * plotW;
-            const getY = (v) => margin.top + plotH - ((v - minVal) / range) * plotH;
-
-            // 1. Draw Y-Axis Lines
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.fillStyle = '#64748b';
-            ctx.font = "10px Inter";
-            ctx.textAlign = "right";
-            
-            for (let i = 0; i <= 4; i++) {
-                const y = margin.top + (plotH / 4) * i;
-                const val = maxVal - (range / 4) * i;
-                
-                ctx.beginPath();
-                ctx.moveTo(margin.left, y);
-                ctx.lineTo(w - margin.right, y);
-                ctx.stroke();
-                
-                ctx.fillText(Math.round(val), margin.left - 5, y + 3);
-            }
-
-            // 2. Draw X-Axis Labels
-            ctx.textAlign = "center";
-            const labelSkip = Math.ceil(dates.length / 4); 
-            dates.forEach((date, i) => {
-                if (i % labelSkip === 0) {
-                    const x = getX(i);
-                    // Show only MM-DD part
-                    ctx.fillText(date.substring(5), x, h - 10);
-                }
-            });
-
-            // 3. Draw Line
-            ctx.beginPath();
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            data.forEach((v, i) => {
-                const x = getX(i);
-                const y = getY(v);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // 4. Draw Points
-            data.forEach((v, i) => {
-                const x = getX(i);
-                const y = getY(v);
-                ctx.beginPath();
-                ctx.fillStyle = color;
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // 5. Highlight Selected Entry
-            if (selectedEntryIndex !== null && data[selectedEntryIndex] !== undefined) {
-                const x = getX(selectedEntryIndex);
-                const y = getY(data[selectedEntryIndex]);
-                
-                // Vertical Line
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-                ctx.setLineDash([2, 2]);
-                ctx.beginPath();
-                ctx.moveTo(x, margin.top);
-                ctx.lineTo(x, margin.top + plotH);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Big Circle
-                ctx.beginPath();
-                ctx.fillStyle = '#fff';
-                ctx.arc(x, y, 6, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.fillStyle = color;
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Tooltip
-                tooltip.style.left = (x + 10) + 'px';
-                tooltip.style.top = (y - 20) + 'px';
-                tooltip.innerHTML = `${dates[selectedEntryIndex]}<br><b>${data[selectedEntryIndex]}</b>`;
-                tooltip.classList.add('visible');
-            } else {
-                tooltip.classList.remove('visible');
+    // 🎯 1. Heart Rate (Line)
+    new Chart(document.getElementById('hrChart'), {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Heart Rate',
+                data: heartRates,
+                borderColor: '#16a596',
+                backgroundColor: '#16a59633',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#9ca3af' } },
+                y: { ticks: { color: '#9ca3af' } }
             }
         }
+    });
 
-        // 3. Selection Logic
-        function selectEntry(index) {
-            if (selectedEntryIndex === index) {
-                selectedEntryIndex = null; // Deselect
-            } else {
-                selectedEntryIndex = index;
+    // 🎯 2. Steps (Bar with Status Colors 🔥)
+    new Chart(document.getElementById('stepsChart'), {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Steps',
+                data: steps,
+                backgroundColor: steps.map((_, i) => {
+                    if (status[i] === 'Critical') return '#ef4444';
+                    if (status[i] === 'Warning') return '#f59e0b';
+                    return '#22c55e';
+                }),
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#9ca3af' } },
+                y: { ticks: { color: '#9ca3af' } }
             }
-
-            // Update Table UI
-            const rows = document.querySelectorAll('#table-body tr');
-            rows.forEach((r, i) => {
-                if (i === selectedEntryIndex) r.classList.add('selected');
-                else r.classList.remove('selected');
-            });
-
-            renderAllCharts();
         }
+    });
 
-        function renderAllCharts() {
-            // Clear tooltips first
-            document.querySelectorAll('.chart-tooltip').forEach(t => t.classList.remove('visible'));
-            
-            drawGraph('hrChart', heartRates, '#16a596', 'tooltip-hr');
-            drawGraph('stepsChart', steps, '#f59e0b', 'tooltip-steps');
-            drawGraph('sleepChart', sleep, '#8b5cf6', 'tooltip-sleep');
+    // 🎯 3. Sleep (Area Chart)
+    new Chart(document.getElementById('sleepChart'), {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Sleep',
+                data: sleep,
+                borderColor: '#8b5cf6',
+                backgroundColor: '#8b5cf633',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#9ca3af' } },
+                y: { ticks: { color: '#9ca3af' } }
+            }
         }
+    });
 
-        function changeTimeRange() {
-            const days = document.getElementById('days-selector').value;
-            window.location.href = "{{ url_for('dashboard') }}?days=" + days;
-        }
-
-        window.addEventListener('load', renderAllCharts);
-        window.addEventListener('resize', renderAllCharts);
-    </script>
+    function changeTimeRange() {
+        const days = document.getElementById('days-selector').value;
+        window.location.href = "{{ url_for('dashboard') }}?days=" + days;
+    }
+</script>
 </body>
 </html>

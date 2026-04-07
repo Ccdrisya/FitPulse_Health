@@ -103,14 +103,38 @@ def inject_user():
 @login_required
 def home():
     username = session['username']
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    # latest snapshot (already exists)
     cursor.execute('SELECT * FROM health_data WHERE username = %s ORDER BY entry_time DESC LIMIT 1', (username,))
     latest = cursor.fetchone()
+
+    # ✅ NEW: last 15 records for anomaly chart
+    cursor.execute('''
+        SELECT entry_time, steps, status 
+        FROM health_data 
+        WHERE username = %s 
+        ORDER BY entry_time ASC 
+        LIMIT 15
+    ''', (username,))
+    recent_chart = cursor.fetchall()
+
     cursor.close()
     conn.close()
-    return render_template('home.html', user={'username': username}, latest=latest or {})
 
+    chart_data = {
+        'dates': [d['entry_time'].strftime('%m-%d') for d in recent_chart],
+        'steps': [d['steps'] for d in recent_chart],
+        'status': [d['status'] for d in recent_chart]
+    }
+
+    return render_template('home.html',
+                           user={'username': username},
+                           latest=latest,
+                           chart_data=chart_data,
+                           recent_entries=[latest] if latest else [])
 # --- NEW: UPLOAD FEATURE (Milestone 4 Logic) ---
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required

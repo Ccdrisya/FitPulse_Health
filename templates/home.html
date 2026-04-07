@@ -150,7 +150,17 @@
                     </div>
                 {% endif %}
             </div>
+            <br>
+            <div class="snapshot-card">
 
+                <section class="charts-section" style="margin-bottom:2rem;">
+    <h2>Recent Activity Status</h2>
+
+    <div class="graph-container" style="height:300px;">
+        <canvas id="homeStepsChart"></canvas>
+    </div>
+</section>
+            </div>
             <!-- Weekly Goals Card -->
             <div class="snapshot-card goal-card">
                 <div class="snapshot-header">
@@ -235,6 +245,9 @@
 
     <script>
         // Set greeting based on time
+        const stepsData = {{ chart_data.steps | tojson }};
+        const statusData = {{ chart_data.status | tojson }};
+        const dates = {{ chart_data.dates | tojson }};
         const hour = new Date().getHours();
         const greetingEl = document.getElementById('greeting-time');
         if (hour < 12) {
@@ -244,6 +257,53 @@
         } else {
             greetingEl.textContent = 'Good evening';
         }
+
+        function drawAnomalyBarChart(canvasId, data, statusArr) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentElement.getBoundingClientRect();
+
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const w = rect.width;
+    const h = rect.height;
+
+    const margin = { top: 10, right: 10, bottom: 30, left: 40 };
+    const plotW = w - margin.left - margin.right;
+    const plotH = h - margin.top - margin.bottom;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!data.length) return;
+
+    const maxVal = Math.max(...data) * 1.1;
+    const barWidth = plotW / data.length * 0.6;
+
+    data.forEach((v, i) => {
+        const x = margin.left + i * (plotW / data.length);
+        const barHeight = (v / maxVal) * plotH;
+        const y = margin.top + plotH - barHeight;
+
+        // 🎨 Status color logic
+        let color = '#22c55e'; // green
+        if (statusArr[i] === 'Warning') color = '#f59e0b';
+        if (statusArr[i] === 'Critical') color = '#ef4444';
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, barWidth, barHeight);
+
+        // Optional: date labels
+        ctx.fillStyle = '#64748b';
+        ctx.font = "10px Inter";
+        ctx.textAlign = "center";
+        ctx.fillText(dates[i], x + barWidth/2, h - 5);
+    });
+}
+
+window.addEventListener('load', () => {
+    drawAnomalyBarChart('homeStepsChart', stepsData, statusData);
+});
     </script>
 </body>
 </html>
