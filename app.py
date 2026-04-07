@@ -210,7 +210,7 @@ def dashboard():
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    
+
     cursor.execute(
         '''SELECT * FROM health_data 
            WHERE username = %s 
@@ -227,22 +227,36 @@ def dashboard():
     avg_steps = round(sum(d['steps'] for d in health_data) / len(health_data)) if health_data else 0
     avg_sleep = round(sum(float(d['sleep']) for d in health_data) / len(health_data), 1) if health_data else 0
 
+    # Fix status and add class for CSS
+    for entry in health_data:
+        if not entry.get('status'):
+            entry['status'] = 'Normal'
+        status_lower = entry['status'].lower()
+        if status_lower in ['healthy', 'normal']:
+            entry['status_class'] = 'healthy'
+        elif status_lower == 'warning':
+            entry['status_class'] = 'warning'
+        elif status_lower == 'critical':
+            entry['status_class'] = 'critical'
+        else:
+            entry['status_class'] = 'healthy'
+
     # Prepare chart data
     chart_data = {
         'heart_rate': [d['heart_rate'] for d in health_data],
         'steps': [d['steps'] for d in health_data],
         'sleep': [float(d['sleep']) for d in health_data],
         'dates': [d['entry_time'].strftime('%Y-%m-%d %H:%M') for d in health_data],
-        'status': [d['status'] for d in health_data] # Pass status for coloring
+        'status': [d['status'] for d in health_data]  # optional for chart
     }
 
     return render_template('dashboard.html',
-                         health_data=health_data[-20:],
-                         chart_data=chart_data,
-                         avg_heart_rate=avg_hr,
-                         avg_steps=avg_steps,
-                         avg_sleep=avg_sleep,
-                         days=days)
+                           health_data=health_data[-20:],
+                           chart_data=chart_data,
+                           avg_heart_rate=avg_hr,
+                           avg_steps=avg_steps,
+                           avg_sleep=avg_sleep,
+                           days=days)
 
 @app.route('/export_data')
 @login_required

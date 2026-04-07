@@ -209,7 +209,7 @@
                             <td>{{ entry.heart_rate }}</td>
                             <td>{{ entry.steps }}</td>
                             <td>{{ entry.sleep }}</td>
-                            <td><span class="status-badge {{ entry.status|lower }}">{{ entry.status }}</span></td>
+                           <td><span class="status-badge {{ entry.status_class }}">{{ entry.status }}</span></td>
                         </tr>
                         {% else %}
                         <tr>
