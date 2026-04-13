@@ -72,39 +72,43 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        age = request.form['age']
-        gender = request.form['gender']
-        password = generate_password_hash(request.form['password'])
-        
-        conn = get_db_connection()
-        # cursor = conn.cursor(dictionary=True)
-        cursor = conn.cursor()
-        
-        # cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-        # if cursor.fetchone():
-        #     flash('Username exists', 'error')
-        #     return render_template('register.html')
+        try:
+            username = request.form['username']
+            email = request.form['email']
+            age = request.form['age']
+            gender = request.form['gender']
+            password = generate_password_hash(request.form['password'])
+                
+            conn = get_db_connection()
+            # cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
+            
+            # cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+            # if cursor.fetchone():
+            #     flash('Username exists', 'error')
+            #     return render_template('register.html')
 
-        #render---
-        cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-        existing_user = fetch_one_dict(cursor)
-        if existing_user:
-            flash('Username already exists', 'error')
+            #render---
+            cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+            existing_user = fetch_one_dict(cursor)
+            if existing_user:
+                flash('Username already exists', 'error')
+                cursor.close()
+                conn.close()
+                return render_template('register.html')
+            cursor.execute(
+                'INSERT INTO users (username, email, age, gender, password) VALUES (%s, %s, %s, %s, %s)',
+                (username, email, age, gender, password)
+            )
+            conn.commit()
             cursor.close()
             conn.close()
-            return render_template('register.html')
-        cursor.execute(
-            'INSERT INTO users (username, email, age, gender, password) VALUES (%s, %s, %s, %s, %s)',
-            (username, email, age, gender, password)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        flash('Registered! Please login.', 'success')
-        return redirect(url_for('login'))
+            
+            flash('Registered! Please login.', 'success')
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            return str(e) 
     return render_template('register.html')
 
 @app.route('/logout')
