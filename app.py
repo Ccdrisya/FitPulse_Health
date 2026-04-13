@@ -78,7 +78,8 @@ def register():
         password = generate_password_hash(request.form['password'])
         
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        # cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         
         cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
         if cursor.fetchone():
@@ -115,7 +116,8 @@ def home():
     username = session['username']
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     # latest snapshot (already exists)
     cursor.execute('SELECT * FROM health_data WHERE username = %s ORDER BY entry_time DESC LIMIT 1', (username,))
@@ -172,7 +174,8 @@ def upload_data():
             
             # Save to DB
             conn = get_db_connection()
-            cursor = conn.cursor(dictionary=True)
+            # cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             
             count = 0
             for _, row in df.iterrows():
@@ -232,7 +235,8 @@ def data_entry():
             status = "Healthy"
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        # cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute(
             'INSERT INTO health_data (username, heart_rate, steps, sleep, status, entry_time) VALUES (%s, %s, %s, %s, %s, %s)',
             (username, hr, steps, sleep, status, entry_time)
@@ -251,7 +255,8 @@ def dashboard():
     days = request.args.get('days', 7, type=int)
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         '''SELECT * FROM health_data 
@@ -307,13 +312,14 @@ def export_data():
     username = session['username']
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         "SELECT entry_time, heart_rate, steps, sleep, status FROM health_data WHERE username = %s",
         (username,)
     )
-    data = cursor.fetchall()
+    data = fetch_all_dict(cursor)
 
     cursor.close()
     conn.close()
@@ -335,7 +341,8 @@ def export_data():
 def profile():
     username = session['username']
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    # cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     # Get user info
     cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
@@ -344,7 +351,7 @@ def profile():
 
     # Get stats for the profile page
     cursor.execute('SELECT COUNT(*) as total_entries FROM health_data WHERE username = %s', (username,))
-    stats = cursor.fetchone()
+    stats = fetch_one_dict(cursor)
 
     if request.method == 'POST':
         # Handle Profile Update
