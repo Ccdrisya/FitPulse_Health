@@ -1,7 +1,7 @@
 from asyncio import sleep
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response
-import mysql.connector
+# import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import pandas as pd
@@ -11,15 +11,23 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
 # MySQL Configuration
-db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'rootuser1',
-    'database': 'fit'
-}
+# db_config = {
+#     'host': 'localhost',
+#     'user': 'root',
+#     'password': 'rootuser1',
+#     'database': 'fit'
+# }
 
 def get_db_connection():
-    return mysql.connector.connect(**db_config)
+    return psycopg2.connect(
+        host=os.environ.get("DB_HOST"),
+        database=os.environ.get("DB_NAME"),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        port=os.environ.get("DB_PORT")
+    )
+# def get_db_connection():
+#     return mysql.connector.connect(**db_config)
 
 def login_required(f):
     def wrap(*args, **kwargs):
@@ -44,9 +52,11 @@ def login():
         password = request.form['password']
         
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        # cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-        user = cursor.fetchone()
+        # user = cursor.fetchone()
+        user = fetch_one_dict(cursor)
         cursor.close()
         conn.close()
         
@@ -250,7 +260,8 @@ def dashboard():
            ORDER BY entry_time ASC''',
         (username, days)
     )
-    health_data = cursor.fetchall()
+    # health_data = cursor.fetchall()
+    health_data = fetch_all_dict(cursor)
     cursor.close()
     conn.close()
 
@@ -328,7 +339,8 @@ def profile():
 
     # Get user info
     cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-    user = cursor.fetchone()
+    # user = cursor.fetchone()
+    user = fetch_one_dict(cursor)
 
     # Get stats for the profile page
     cursor.execute('SELECT COUNT(*) as total_entries FROM health_data WHERE username = %s', (username,))
@@ -349,7 +361,8 @@ def profile():
         
         # Refresh user data
         cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-        user = cursor.fetchone()
+        # user = cursor.fetchone()
+        user = fetch_one_dict(cursor)
 
     cursor.close()
     conn.close()
@@ -384,6 +397,16 @@ def delete_all():
     conn.close()
 
     return redirect(url_for('dashboard'))
+
+## Helper functions to convert DB results to dicts (if not using dictionary cursor)-renderdb
+def fetch_all_dict(cursor):
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+def fetch_one_dict(cursor):
+    columns = [col[0] for col in cursor.description]
+    row = cursor.fetchone()
+    return dict(zip(columns, row)) if row else None
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,22 +1,18 @@
-CREATE DATABASE fit;
-
-USE fit;
-
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) UNIQUE,
-    email VARCHAR(100),
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE,
+    email TEXT,
     age INT,
-    gender VARCHAR(10),
-    password VARCHAR(255)
+    gender TEXT,
+    password TEXT
 );
 
 CREATE TABLE health_data (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50),
+    id SERIAL PRIMARY KEY,
+    username TEXT,
     heart_rate INT,
     steps INT,
     sleep FLOAT,
-    status VARCHAR(50),
-    entry_time DATETIME
+    status TEXT,
+    entry_time TIMESTAMP
 );
