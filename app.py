@@ -280,12 +280,12 @@ def dashboard():
     # health_data = cursor.fetchall()
 #render-----
     cursor.execute(
-    '''SELECT * FROM health_data 
-       WHERE username = %s 
-       AND entry_time >= NOW() - INTERVAL '%s days'
-       ORDER BY entry_time ASC''',
-    (username, days)
-)
+        '''SELECT * FROM health_data 
+        WHERE username = %s 
+        AND entry_time >= NOW() - (%s * INTERVAL '1 day')
+        ORDER BY entry_time ASC''',
+        (username, days)
+    )
     health_data = fetch_all_dict(cursor)
     cursor.close()
     conn.close()
