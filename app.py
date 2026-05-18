@@ -1,8 +1,8 @@
 from asyncio import sleep
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response
-# import mysql.connector
-import psycopg2
+import mysql.connector
+# import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import pandas as pd
@@ -12,25 +12,25 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
 # MySQL Configuration
-# db_config = {
-#     'host': 'localhost',
-#     'user': 'root',
-#     'password': 'rootuser1',
-#     'database': 'fit'
-# }
-def get_db_connection():
-    if os.environ.get("RENDER"):  
-        return psycopg2.connect(
-            host=os.environ.get("DB_HOST"),
-            database=os.environ.get("DB_NAME"),
-            user=os.environ.get("DB_USER"),
-            password=os.environ.get("DB_PASSWORD"),
-            port=os.environ.get("DB_PORT")
-        )
-    else:
-        return mysql.connector.connect(**db_config)
+db_config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'rootuser1',
+    'database': 'fit'
+}
 # def get_db_connection():
-#     return mysql.connector.connect(**db_config)
+#     if os.environ.get("RENDER"):  
+#         return psycopg2.connect(
+#             host=os.environ.get("DB_HOST"),
+#             database=os.environ.get("DB_NAME"),
+#             user=os.environ.get("DB_USER"),
+#             password=os.environ.get("DB_PASSWORD"),
+#             port=os.environ.get("DB_PORT")
+#         )
+#     else:
+#         return mysql.connector.connect(**db_config)
+def get_db_connection():
+    return mysql.connector.connect(**db_config)
 
 @app.route('/init_db')
 def init_db():
@@ -39,25 +39,25 @@ def init_db():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
-        email TEXT,
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) UNIQUE,
+        email VARCHAR(255),
         age INT,
-        gender TEXT,
+        gender VARCHAR(50),
         password TEXT
-    );
+    )
     """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS health_data (
-        id SERIAL PRIMARY KEY,
-        username TEXT,
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255),
         heart_rate INT,
         steps INT,
         sleep FLOAT,
-        status TEXT,
-        entry_time TIMESTAMP
-    );
+        status VARCHAR(50),
+        entry_time DATETIME
+    )
     """)
 
     conn.commit()
@@ -89,11 +89,11 @@ def login():
         password = request.form['password']
         
         conn = get_db_connection()
-        # cursor = conn.cursor(dictionary=True)
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+        #cursor = conn.cursor()
         cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-        # user = cursor.fetchone()
-        user = fetch_one_dict(cursor)
+        user = cursor.fetchone()
+        # user = fetch_one_dict(cursor)
         cursor.close()
         conn.close()
         
@@ -116,17 +116,17 @@ def register():
             password = generate_password_hash(request.form['password'])
                 
             conn = get_db_connection()
-            # cursor = conn.cursor(dictionary=True)
             cursor = conn.cursor()
             
-            # cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
-            # if cursor.fetchone():
-            #     flash('Username exists', 'error')
-            #     return render_template('register.html')
-
-            #render---
             cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+            if cursor.fetchone():
+                flash('Username exists', 'error')
+                return render_template('register.html')
+
+            cursor.execute( 'SELECT * FROM users WHERE username = %s', (username,))
+
             existing_user = fetch_one_dict(cursor)
+
             if existing_user:
                 flash('Username already exists', 'error')
                 cursor.close()
@@ -322,7 +322,7 @@ def dashboard():
     cursor.execute(
         '''SELECT * FROM health_data 
         WHERE username = %s 
-        AND entry_time >= NOW() - (%s * INTERVAL '1 day')
+        AND entry_time >= DATE_SUB(NOW(), INTERVAL %s DAY)
         ORDER BY entry_time ASC''',
         (username, days)
     )
