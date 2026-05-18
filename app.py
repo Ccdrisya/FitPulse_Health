@@ -200,74 +200,122 @@ def home():
                            latest=latest,
                            chart_data=chart_data,
                            recent_entries=[latest] if latest else [])
+
 # --- NEW: UPLOAD FEATURE (Milestone 4 Logic) ---
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/upload', methods=['POST'])
 @login_required
 def upload_data():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file selected', 'error')
-            return redirect(request.url)
-        
-        file = request.files['file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            return redirect(request.url)
 
-        try:
-            # Read file
-            if file.filename.endswith('.csv'):
-                df = pd.read_csv(file)
-            elif file.filename.endswith('.json'):
-                df = pd.read_json(file)
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('data_entry'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('data_entry'))
+
+    try:
+        filename = file.filename.lower()
+
+        # =========================
+        # READ FILE
+        # =========================
+        if filename.endswith('.csv'):
+            df = pd.read_csv(file)
+
+        elif filename.endswith('.xlsx'):
+            df = pd.read_excel(file)
+
+        elif filename.endswith('.json'):
+            df = pd.read_json(file)
+
+        else:
+            flash('Unsupported file format. Use CSV, Excel, or JSON.', 'error')
+            return redirect(url_for('data_entry'))
+
+        # =========================
+        # VALIDATE REQUIRED COLUMNS
+        # =========================
+        required_columns = ['heart_rate', 'steps', 'sleep']
+
+        for col in required_columns:
+            if col not in df.columns:
+                flash(f'Missing column: {col}', 'error')
+                return redirect(url_for('data_entry'))
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        count = 0
+
+        for _, row in df.iterrows():
+
+            # -------------------------
+            # Date Handling
+            # -------------------------
+            date_val = (
+                row.get('entry_time')
+                or row.get('timestamp')
+                or datetime.now()
+            )
+
+            # Convert string to datetime if needed
+            if isinstance(date_val, str):
+                date_val = pd.to_datetime(date_val)
+
+            # -------------------------
+            # Read Values
+            # -------------------------
+            hr = int(row['heart_rate'])
+            steps = int(row['steps'])
+            sleep_hours = float(row['sleep'])
+
+            # -------------------------
+            # Status Logic
+            # -------------------------
+            if hr >= 120 or sleep_hours < 5:
+                status = "Critical"
+
+            elif hr >= 100 or sleep_hours < 6:
+                status = "Warning"
+
             else:
-                flash('Unsupported format. Use CSV or JSON.', 'error')
-                return redirect(request.url)
+                status = "Healthy"
 
-            
-            # Save to DB
-            conn = get_db_connection()
-            # cursor = conn.cursor(dictionary=True)
-            cursor = conn.cursor()
-            
-            count = 0
-            for _, row in df.iterrows():
-                # Find date column dynamically
-                date_val = row.get('entry_time') or row.get('ds') or row.get('timestamp') or datetime.now()
-                
-                # Find metric columns dynamically
-                hr = row.get('heart_rate') or row.get('heart_rate_bpm') or 0
-                steps = row.get('steps') or 0
-                sleep = row.get('sleep') or 0
-                hr = int(hr)
-                sleep = float(sleep)
-
-                if hr >= 120 or sleep < 5:
-                    status = "Critical"
-                elif hr >= 100 or sleep < 6:
-                    status = "Warning"
-                else:
-                    status = "Healthy"# Use calculated severity
-                
-                cursor.execute(
-                    """INSERT INTO health_data (username, heart_rate, steps, sleep, status, entry_time)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (session['username'], int(hr), int(steps), float(sleep), status, date_val)
+            # -------------------------
+            # Insert Into DB
+            # -------------------------
+            cursor.execute(
+                '''
+                INSERT INTO health_data
+                (username, heart_rate, steps, sleep, status, entry_time)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ''',
+                (
+                    session['username'],
+                    hr,
+                    steps,
+                    sleep_hours,
+                    status,
+                    date_val
                 )
-                count += 1
+            )
 
-                
-                
-            conn.commit()
-            cursor.close()
-            conn.close()
-            flash(f'Successfully imported {count} records!', 'success')
-            return redirect(url_for('dashboard'))
-            
-        except Exception as e:
-            flash(f'Error processing file: {str(e)}', 'error')
-            
-    return render_template('upload.html')
+            count += 1
+
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        flash(f'Successfully imported {count} records!', 'success')
+
+    except Exception as e:
+        flash(f'Upload failed: {str(e)}', 'error')
+
+    return redirect(url_for('dashboard'))
 
 @app.route('/data_entry', methods=['GET', 'POST'])
 @login_required

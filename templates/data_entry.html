@@ -64,7 +64,7 @@
             <!-- TAB BUTTONS -->
             <div class="entry-tabs">
                 <button class="tab-btn active" onclick="switchTab('manual')">Manual Entry</button>
-                <!-- <button class="tab-btn" onclick="switchTab('bulk')">Bulk Import (CSV/JSON)</button> -->
+                <button class="tab-btn" onclick="switchTab('bulk')">Bulk Import (CSV/JSON)</button>
             </div>
 
             <div class="entry-content">
@@ -123,12 +123,18 @@
                     </form>
                 </div>
 
-                <!-- TAB 2: BULK IMPORT (New Feature)
+                <!-- TAB 2: BULK IMPORT (New Feature) -->
                 <div id="bulk-tab" class="tab-content">
                     <div class="tips-card" style="margin-bottom: 1.5rem;">
                         <h4>How to use Bulk Import</h4>
                         <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">
                             Upload a CSV or JSON file. The system will automatically run Anomaly Detection on your data.
+                            <ul style="margin-top:1rem; color:var(--text-secondary); line-height:1.8;">
+                                <li>Supported formats: CSV, XLSX, JSON</li>
+    <li>Required columns: heart_rate, steps, sleep</li>
+    <li>Optional column: entry_time</li>
+    <li>Date format: YYYY-MM-DD HH:MM:SS</li>
+</ul>
     
                         </p>
                     </div>
@@ -142,7 +148,7 @@
                             </svg>
                             <p style="color:var(--text-secondary); margin:0;">Drag & drop a file here, or click to browse</p>
                             <p id="fileName" style="color:var(--primary); font-weight:600; margin-top:0.5rem;"></p>
-                            <input type="file" id="fileInput" name="file" accept=".csv,.json" required hidden onchange="updateFileName(this)">
+                            <input type="file" id="fileInput" name="file" accept=".csv,.xlsx,.json" required hidden onchange="updateFileName(this)">
                         </div>
                         
                         <div class="form-actions" style="margin-top: 1.5rem;">
@@ -152,7 +158,7 @@
                             </button>
                         </div>
                     </form>
-                </div> -->
+                </div>
 
             </div>
         </div>
@@ -200,6 +206,29 @@
         heartRateInput.addEventListener('input', updatePreview);
         stepsInput.addEventListener('input', updatePreview);
         sleepInput.addEventListener('input', updatePreview);
+
+        const dropZone = document.querySelector('.drop-zone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+
+    dropZone.classList.remove('dragover');
+
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateFileName(fileInput);
+    }
+});
     </script>
 </body>
 </html>
